@@ -1,0 +1,138 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Mappings" : {
+		"RegionMap" : {
+			"eu-west-1"      : { "AMI" : "ami-f9dd458a" },
+			"eu-central-1"      : { "AMI" : "ami-ea26ce85" }
+		}
+	},
+	"Parameters" : {
+		"vpcId" : {
+			"Type" : "String",
+			"Description" : "The VPC ID"
+		},
+		"publicSubnet01id" : {
+			"Type" : "String",
+			"Description" : "The 1st puvlic subnet ID"
+		},
+		"publicSubnet02id" : {
+			"Type" : "String",
+			"Description" : "The 2nd puvlic subnet ID"
+		},
+		"privateSubnet01id" : {
+			"Type" : "String",
+			"Description" : "The 1st private subnet ID"
+		},
+		"privateSubnet02id" : {
+			"Type" : "String",
+			"Description" : "The 2nd private subnet ID"
+		},
+		"myPublicIP" : {
+			"Description" : "My public address IP",
+			"Type": "String",
+			"MinLength": "9",
+			"MaxLength": "18",
+			"Default": "10.0.0.0/16",
+			"AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription": "Must be a valid IP CIDR range of the form x.x.x.x/x."
+		},
+		"keyName" : {
+			"Type" : "String",
+			"Description" : "The key name to connect to the instance"
+		},
+		"publicSubnet01cidr" : {
+			"Type" : "String",
+			"Description" : "The CIDR of the 1st public subnet"
+		},
+		"publicSubnet02cidr" : {
+			"Type" : "String",
+			"Description" : "The CIDR of the 2nd public subnet"
+		},
+		"instanceType" : {
+			"Type" : "String",
+			"Description" : "The size of the instance"
+		}
+	},
+	"Resources" : {
+		"sshSGFromHome" : {
+		   "Type" : "AWS::EC2::SecurityGroup",
+		   "Properties" : {
+			  "GroupDescription" : "Allow ssh to client host",
+			  "VpcId" : {"Ref" : "vpcId"},
+			  "SecurityGroupIngress" : [{
+					"IpProtocol" : "tcp",
+					"FromPort" : "22",
+					"ToPort" : "22",
+					"CidrIp" : {"Ref" : "myPublicIP"}
+				 }],
+			  "SecurityGroupEgress" : [{
+				 "IpProtocol" : "tcp",
+				 "FromPort" : "0",
+				 "ToPort" : "65535",
+				 "CidrIp" : "0.0.0.0/0"
+			  }]
+		   }
+		},
+		"sshSGFromPublic" : {
+		   "Type" : "AWS::EC2::SecurityGroup",
+		   "Properties" : {
+			  "GroupDescription" : "Allow ssh to client host",
+			  "VpcId" : {"Ref" : "vpcId"},
+			  "SecurityGroupIngress" : [{
+					"IpProtocol" : "tcp",
+					"FromPort" : "22",
+					"ToPort" : "22",
+					"CidrIp" : { "Ref" : "publicSubnet01cidr" }
+				 },
+				 {
+					"IpProtocol" : "tcp",
+					"FromPort" : "22",
+					"ToPort" : "22",
+					"CidrIp" : { "Ref" : "publicSubnet02cidr" }
+				 }],
+			  "SecurityGroupEgress" : [{
+				 "IpProtocol" : "tcp",
+				 "FromPort" : "0",
+				 "ToPort" : "65535",
+				 "CidrIp" : "0.0.0.0/0"
+			  }]
+			}
+		},
+		"bastionInstance" : {
+			  "Type" : "AWS::EC2::Instance",
+			  "Properties" : {
+				"ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+				"KeyName" : { "Ref" : "keyName" },
+				"InstanceType" : {"Ref" : "instanceType"},
+				"NetworkInterfaces": [ {
+				  "AssociatePublicIpAddress": "true",
+				  "DeviceIndex": "0",
+				  "GroupSet": [{ "Ref" : "sshSGFromHome" }],
+				  "SubnetId": { "Ref" : "publicSubnet01id" }
+				} ], 
+				"Tags" : [ {"Key" : "Name" , "Value" : "bastion_instance"}]
+			  }
+		},
+		"privatepInstance" : {
+			  "Type" : "AWS::EC2::Instance",
+			  "Properties" : {
+				"ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+				"KeyName" : { "Ref" : "keyName" },
+				"InstanceType" : {"Ref" : "instanceType"},
+				"NetworkInterfaces": [ {
+				  "AssociatePublicIpAddress": "false",
+				  "DeviceIndex": "0",
+				  "GroupSet": [{ "Ref" : "sshSGFromPublic" }],
+				  "SubnetId": { "Ref" : "privateSubnet01id" }
+				} ], 
+				"Tags" : [ {"Key" : "Name" , "Value" : "private_instance"}]
+			  }
+		}
+	},
+	"Outputs" : {
+		"bastionPublicIP" :{
+			"Description": "The bastion public IP",  
+			"Value" : {"Fn::GetAtt" : ["bastionInstance", "PublicIp"]}
+		}
+	}
+}
