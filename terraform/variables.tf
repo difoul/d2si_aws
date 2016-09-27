@@ -1,15 +1,21 @@
 variable "aws_access_key" {
   description = "AWS access key"
-  default     = "${AWS_ACCESS_KEY}"
+  default     = "xxxx"
 }
 variable "aws_secret_key" {
   description = "AWS secret key"
-  default     = "${AWS_SECRET_KEY}"
+  default     = "xxxx"
 }
 variable "aws_region" {
   description = "AWS region to launch servers."
   default     = "eu-west-1"
 }
+#variable aws_azs {
+#  default = { 
+#    eu-west-1 = ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
+#    eu-central-1 = ["eu-central-1a", "eu-central-1b"]
+#  }
+#}
 variable "vpc_cidr" {
   description = "The VPC CIDR"
   default     = "10.0.0.0/16"
@@ -29,4 +35,12 @@ variable "privatesubnet01_cidr" {
 variable "privatesubnet02_cidr" {
   description = "The 2nd private subnet CIDR"
   default     = "10.0.3.0/24"
+}
+variable "default_ami" {
+  description = "The default AMI"
+  default     = "ami-d41d58a7"
+}
+variable "key_name" {
+  description = "The default AMI"
+  default     = "foudil_key"
 }
